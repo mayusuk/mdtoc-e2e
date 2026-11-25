@@ -42,6 +42,17 @@ func TestFR2AC2_InlineCodeAndEmphasisMarkersRemoved(t *testing.T) {
 	})
 }
 
+func TestFR2AC2_UnderscoreEmphasisAcrossCodeSpan(t *testing.T) {
+	checkSlugs(t, []struct{ in, want string }{
+		{"_a `b` c_", "a-b-c"},
+		{"__a `b` c__", "a-b-c"},
+		{"_`code`_", "code"},
+		{"_a `b_` c", "_a-b_-c"},       // underscore inside code never closes
+		{"x_`y`_z", "x_y_z"},           // intraword: kept
+		{"_a `b` c_ d_e", "a-b-c-d_e"}, // snake_case after the pair is kept
+	})
+}
+
 func TestFR2AC3_DuplicateSlugsGetSuffix(t *testing.T) {
 	var s Slugger
 	for i, want := range []string{"intro", "intro-1", "intro-2"} {
