@@ -54,16 +54,31 @@ func (s *Slugger) Slug(text string) string {
 }
 
 // stripMarkers removes inline code backticks and emphasis markers from text,
-// keeping their content (FR-2 AC2). Code span content is kept as written.
-// An underscore run is removed only when it opens or closes emphasis at a word
-// boundary, so snake_case keeps its underscore (plan decision D1). Emphasis
-// may enclose a code span, so underscores are paired in one pass over the
-// whole text, with code spans opaque. Asterisks and unpaired backticks need
-// no handling here: Slug drops them anyway.
+// keeping their content (FR-2 AC2, FR-3 AC3). Code span content is kept as
+// written. An underscore run is removed only when it opens or closes emphasis
+// at a word boundary, so snake_case keeps its underscore (plan decision D1);
+// an asterisk run may also open or close inside a word. Emphasis may enclose a
+// code span, so markers are paired in one pass over the whole text, with code
+// spans opaque. Unpaired markers are kept.
 func stripMarkers(text string) string {
 	rs := []rune(text)
-	code := make([]bool, len(rs)) // inside a code span, backticks included
-	drop := make([]bool, len(rs))
+	code, drop := codeSpans(rs)
+	markEmphasis(rs, '_', false, code, drop)
+	markEmphasis(rs, '*', true, code, drop)
+	out := make([]rune, 0, len(rs))
+	for i, r := range rs {
+		if !drop[i] {
+			out = append(out, r)
+		}
+	}
+	return string(out)
+}
+
+// codeSpans finds the code spans in rs. code reports positions inside a span,
+// its backticks included; drop reports the spans' backticks.
+func codeSpans(rs []rune) (code, drop []bool) {
+	code = make([]bool, len(rs))
+	drop = make([]bool, len(rs))
 	for i := 0; i < len(rs); {
 		if rs[i] != '`' {
 			i++
@@ -84,14 +99,7 @@ func stripMarkers(text string) string {
 		}
 		i = end + n
 	}
-	markUnderscores(rs, code, drop)
-	out := make([]rune, 0, len(rs))
-	for i, r := range rs {
-		if !drop[i] {
-			out = append(out, r)
-		}
-	}
-	return string(out)
+	return code, drop
 }
 
 // findCloser returns the index of the next run of exactly n backticks at or
@@ -111,18 +119,20 @@ func findCloser(rs []rune, from, n int) int {
 	return -1
 }
 
-// markUnderscores sets drop for paired underscore emphasis runs in rs,
-// ignoring underscores inside code spans. Neighbours are read from rs as
-// written, so a code span's backtick counts as a non-word boundary.
-func markUnderscores(rs []rune, code, drop []bool) {
+// markEmphasis sets drop for paired emphasis runs of c in rs, ignoring
+// markers inside code spans. A run opens when followed by a non-space and
+// closes when preceded by one; unless intraword, it must also sit at a word
+// boundary. Neighbours are read from rs as written, so a code span's backtick
+// counts as a non-word boundary.
+func markEmphasis(rs []rune, c rune, intraword bool, code, drop []bool) {
 	type run struct{ start, n int }
 	var openers []run
 	for i := 0; i < len(rs); {
-		if rs[i] != '_' || code[i] {
+		if rs[i] != c || code[i] {
 			i++
 			continue
 		}
-		n := runeRunLen(rs, i, '_')
+		n := runeRunLen(rs, i, c)
 		var prev, next rune
 		hasPrev, hasNext := i > 0, i+n < len(rs)
 		if hasPrev {
@@ -131,8 +141,8 @@ func markUnderscores(rs []rune, code, drop []bool) {
 		if hasNext {
 			next = rs[i+n]
 		}
-		opener := (!hasPrev || !isWord(prev)) && hasNext && !unicode.IsSpace(next)
-		closer := hasPrev && !unicode.IsSpace(prev) && (!hasNext || !isWord(next))
+		opener := (intraword || !hasPrev || !isWord(prev)) && hasNext && !unicode.IsSpace(next)
+		closer := hasPrev && !unicode.IsSpace(prev) && (intraword || !hasNext || !isWord(next))
 		matched := false
 		if closer {
 			for k := len(openers) - 1; k >= 0; k-- {
