@@ -16,7 +16,7 @@ adapter = "github"
 repo    = "mayusuk/mdtoc-e2e"
 
 [limits]
-daily_agent_runs = 20
+daily_agent_runs = 50
 
 [markers]
 aborted = { label = "aborted" }
