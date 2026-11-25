@@ -1,0 +1,50 @@
+# agent-loop project profile, written by agent-loop init. Review it and commit it.
+# Every key is in TECHNICAL-SPEC §13; the values below are the defaults.
+
+base_branch   = "main"
+branch_prefix = "agent/"
+wip           = 2
+max_rounds    = 3
+merge_method  = "squash"
+
+[tracker]
+adapter = "github"
+repo    = "mayusuk/mdtoc-e2e"
+
+[code_host]
+adapter = "github"
+repo    = "mayusuk/mdtoc-e2e"
+
+[limits]
+daily_agent_runs = 20
+
+[markers]
+aborted = { label = "aborted" }
+blocked = { label = "blocked" }
+follow_up = { label = "follow-up" }
+in_progress = { label = "in-progress" }
+needs_owner = { label = "needs-owner" }
+paused = { label = "paused" }
+plan = { label = "plan" }
+plan_proposal = { label = "plan-proposal" }
+ready = { label = "ready" }
+"type:bug" = { label = "bug" }
+"type:feature" = { label = "feature" }
+
+[identities]
+coder    = "secret://github-app/mdtoc-e2e/coder"
+reviewer = "secret://github-app/mdtoc-e2e/reviewer"
+loop     = "secret://github-app/mdtoc-e2e/loop"
+owners   = [{ login = "mayusuk", id = 18241114 }]
+
+[stages.implement]
+command  = ["agent-loop-claude", "implement"]
+contract = "1.0"
+
+[stages.review]
+command  = ["agent-loop-claude", "review"]
+contract = "1.0"
+
+[stages.address]
+command  = ["agent-loop-claude", "address"]
+contract = "1.0"
