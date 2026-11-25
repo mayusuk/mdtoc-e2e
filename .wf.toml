@@ -1,0 +1,46 @@
+# Issue workflow configuration (gh-wf: the plan-work and work-issue skills).
+# Everything repository-specific lives here. The script reads this file from the
+# worktree being checked, so a branch's own checks decide whether it passes.
+
+[repo]
+base_branch = "main"
+remote = "origin"
+
+[paths]
+worktrees = ".worktrees"     # gitignored; one worktree per issue or plan
+plans = "docs/plans"         # plan documents that become feature issues
+work_plans = "docs/work"     # one work plan per issue, committed with the change
+
+[labels]
+feature = "feature"          # issues created from a plan
+bug = "bug"
+plan = "plan"                # tracking issue for a plan
+spec = "spec"                # decisions to fold back into specs; ship files one per PR
+pick_order = ["bug", "feature"]   # which ready issues `next` offers first
+
+[knowledge]
+# Files the agent must read before planning or working an issue.
+read = ["CLAUDE.md", "README.md", ".github/workflows/ci.yml"]
+# Guidance that is not written down anywhere else in the repository.
+notes = """
+"""
+
+# Checks run in order from the worktree root, without a shell. They gate the
+# base branch before a work branch is created, and the branch before it is pushed.
+# Mirror CI. `env` adds environment variables. `when_exists` reports the step as
+# NOT AVAILABLE (never a silent pass) while that path is missing.
+[[verify]]
+name = "vet"
+run = "go vet ./..."
+
+[[verify]]
+name = "tests"
+run = "go test ./..."
+
+# Optional: work plans list criteria under "## Acceptance criteria". Each match of
+# ref_pattern must have a test whose name starts with test_prefix, formatted with
+# the pattern's groups and lowercased.
+# [acceptance]
+# ref_pattern = '\b(FR)-(\d+)\s+AC(\d+)\b'
+# test_prefix = "test_{0}{1}_ac{2}_"
+# test_glob = "tests/**/*.py"
